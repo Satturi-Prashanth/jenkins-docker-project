@@ -1,0 +1,39 @@
+pipeline {
+  agent any
+
+  environment {
+    ENV_FILE = ".env.prod"
+    IMAGE_NAME = "myapp:prod"
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        git branch: 'main', url: 'https://github.com/<your-username>/multi-env-devops-jenkins.git'
+      }
+    }
+
+    stage('Approval') {
+      steps {
+        input message: 'Deploy to Production?'
+      }
+    }
+
+    stage('Build Docker Image') {
+      steps {
+        sh 'docker build -t $IMAGE_NAME app'
+      }
+    }
+
+    stage('Deploy to PROD EC2') {
+      steps {
+        sh '''
+        docker stop prod-app || true
+        docker rm prod-app || true
+        docker run -d --name prod-app \
+        --env-file app/.env.prod -p 3002:3000 $IMAGE_NAME
+        '''
+      }
+    }
+  }
+}

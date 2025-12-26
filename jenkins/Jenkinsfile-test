@@ -1,0 +1,39 @@
+pipeline {
+  agent any
+
+  environment {
+    ENV_FILE = ".env.test"
+    IMAGE_NAME = "myapp:test"
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        git branch: 'test', url: 'https://github.com/<your-username>/multi-env-devops-jenkins.git'
+      }
+    }
+
+    stage('Build & Test') {
+      steps {
+        sh 'cd app && npm install && npm test'
+      }
+    }
+
+    stage('Build Docker Image') {
+      steps {
+        sh 'docker build -t $IMAGE_NAME app'
+      }
+    }
+
+    stage('Deploy to TEST EC2') {
+      steps {
+        sh '''
+        docker stop test-app || true
+        docker rm test-app || true
+        docker run -d --name test-app \
+        --env-file app/.env.test -p 3001:3000 $IMAGE_NAME
+        '''
+      }
+    }
+  }
+}
